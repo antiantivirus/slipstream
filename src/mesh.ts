@@ -73,14 +73,12 @@ export class RadioMesh {
     return [...this.peers.keys()]
   }
 
-  /** Broadcaster: start capturing audio and stream to all connected peers */
-  async startBroadcast(): Promise<MediaStream> {
-    this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-    // Call any peers that connected before broadcast started
+  /** Broadcaster: stream to all connected peers using a pre-processed MediaStream */
+  startBroadcast(stream: MediaStream): void {
+    this.localStream = stream
     for (const id of this.peers.keys()) {
       this.callPeer(id)
     }
-    return this.localStream
   }
 
   /** Listener: connect to a broadcaster (or any peer) by their peer ID */
