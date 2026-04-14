@@ -61,10 +61,6 @@ export class SlipstreamBroadcaster extends LitElement {
       },
       onPeerConnected: (id) => {
         this.peers = [...this.peers, id]
-        // If already broadcasting, call the new peer immediately
-        if (this.broadcasting) {
-          this.mesh?.connectToPeer(id)
-        }
       },
       onPeerDisconnected: (id) => {
         this.peers = this.peers.filter((p) => p !== id)

@@ -59,6 +59,9 @@ export class RadioMesh {
         this.peers.delete(conn.peer)
         this.events.onPeerDisconnected(conn.peer)
       })
+      if (this.role === 'broadcaster' && this.localStream) {
+        this.callPeer(conn.peer)
+      }
     })
   }
 
@@ -73,6 +76,10 @@ export class RadioMesh {
   /** Broadcaster: start capturing audio and stream to all connected peers */
   async startBroadcast(): Promise<MediaStream> {
     this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    // Call any peers that connected before broadcast started
+    for (const id of this.peers.keys()) {
+      this.callPeer(id)
+    }
     return this.localStream
   }
 
