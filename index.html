@@ -3,73 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>slipstream</title>
-    <style>
-      body {
-        font-family: "arial", sans-serif;
-        max-width: 800px;
-        margin: 4rem auto;
-        padding: 0 1.5rem;
-        background: #0f0f0f;
-        color: #e0e0e0;
-      }
-      h1 {
-        font-size: 1.5rem;
-        margin-bottom: 2rem;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-      }
-      .card {
-        background: #1a1a1a;
-        border: 1px solid #2a2a2a;
-        border-radius: 8px;
-        padding: 1.5rem;
-      }
-      h2 {
-        font-size: 1rem;
-        margin: 0 0 1rem;
-        color: #aaa;
-      }
-      button {
-        background: #333;
-        color: #fff;
-        border: 1px solid #444;
-        border-radius: 4px;
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-        font-size: 0.9rem;
-      }
-      button:hover {
-        background: #444;
-      }
-      button:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
-    </style>
+    <title>Slipstream</title>
   </head>
   <body>
     <h1>Slipstream</h1>
-
-    <div class="grid">
-      <div class="card">
-        <h2>Broadcaster</h2>
-        <slipstream-broadcaster
-          channel-id="eb0d511c-042d-47ef-a6b2-6dc7f3ce6490"
-        ></slipstream-broadcaster>
-      </div>
-
-      <div class="card">
-        <h2>Listener</h2>
-        <slipstream-listener
-          channel-id="eb0d511c-042d-47ef-a6b2-6dc7f3ce6490"
-        ></slipstream-listener>
-      </div>
-    </div>
-
-    <script type="module" src="/src/index.ts"></script>
+    <ul>
+      <li><a href="/broadcast.html">Broadcast</a></li>
+      <li><a href="/listen.html">Listen</a></li>
+    </ul>
   </body>
 </html>

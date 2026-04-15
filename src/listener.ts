@@ -2,7 +2,10 @@ import { LitElement, html, css } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { RadioMesh } from './mesh.js'
 
-type ListenerState = 'connecting' | 'offline' | 'live' | 'failed'
+type ListenerState = 'connecting' | 'reconnecting' | 'offline' | 'live' | 'failed'
+
+const RETRY_BASE = 2000
+const RETRY_MAX = 30000
 
 @customElement('slipstream-listener')
 export class SlipstreamListener extends LitElement {
@@ -19,6 +22,8 @@ export class SlipstreamListener extends LitElement {
 
   private mesh: RadioMesh | null = null
   private audioEl: HTMLAudioElement | null = null
+  private retryTimer: ReturnType<typeof setTimeout> | null = null
+  private retryDelay = RETRY_BASE
 
   connectedCallback(): void {
     super.connectedCallback()
@@ -27,6 +32,7 @@ export class SlipstreamListener extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback()
+    this.clearRetryTimer()
     this.mesh?.destroy()
     this.mesh = null
   }
@@ -35,6 +41,25 @@ export class SlipstreamListener extends LitElement {
     if (changed.has('channelId') && this.channelId && !this.mesh) {
       this.connect()
     }
+  }
+
+  private clearRetryTimer(): void {
+    if (this.retryTimer !== null) {
+      clearTimeout(this.retryTimer)
+      this.retryTimer = null
+    }
+  }
+
+  private scheduleReconnect(): void {
+    this.clearRetryTimer()
+    this.mesh?.destroy()
+    this.mesh = null
+    this.playing = false
+    this.state = 'reconnecting'
+    this.retryTimer = setTimeout(() => {
+      this.retryDelay = Math.min(this.retryDelay * 2, RETRY_MAX)
+      this.connect()
+    }, this.retryDelay)
   }
 
   private connect(): void {
@@ -47,11 +72,11 @@ export class SlipstreamListener extends LitElement {
         this.state = 'offline'
       },
       onPeerDisconnected: () => {
-        this.playing = false
-        this.state = 'offline'
+        this.scheduleReconnect()
       },
       onStream: (stream) => {
         if (this.audioEl) this.audioEl.srcObject = stream
+        this.retryDelay = RETRY_BASE
         this.state = 'live'
       },
       onMessage: (data) => {
@@ -60,7 +85,7 @@ export class SlipstreamListener extends LitElement {
         }
       },
       onError: () => {
-        this.state = 'failed'
+        this.scheduleReconnect()
       },
     })
   }
@@ -76,15 +101,11 @@ export class SlipstreamListener extends LitElement {
   }
 
   render() {
-    if (this.state === 'failed') {
-      return html`<div class="panel"><p>Failed to connect</p></div>`
-    }
-
     const isLive = this.state === 'live'
 
     return html`
       <div class="panel">
-        <p>${isLive ? `Live: ${this.nowPlaying || '…'}` : 'Offline'}</p>
+        <p>${isLive ? `Live: ${this.nowPlaying || '…'}` : this.state}</p>
         <button
           @click=${this.playing ? this.handleStop : this.handlePlay}
           ?disabled=${!isLive}

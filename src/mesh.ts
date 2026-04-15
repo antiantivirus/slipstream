@@ -35,6 +35,17 @@ export class RadioMesh {
     })
 
     this.peer.on('error', (err) => {
+      const type = (err as Error & { type?: string }).type
+      if (type === 'peer-unavailable') {
+        // Extract the dead peer ID and clean it up silently
+        const match = err.message.match(/Could not connect to peer (.+)/)
+        if (match) {
+          const stalePeerId = match[1].trim()
+          this.peers.delete(stalePeerId)
+          this.events.onPeerDisconnected(stalePeerId)
+          return
+        }
+      }
       events.onError(err)
     })
 
@@ -51,15 +62,17 @@ export class RadioMesh {
 
     // Incoming data connection
     this.peer.on('connection', (conn) => {
-      this.registerPeer(conn.peer, conn, null)
-      conn.on('data', (data) => this.events.onMessage(data))
-      conn.on('close', () => {
-        this.peers.delete(conn.peer)
-        this.events.onPeerDisconnected(conn.peer)
+      conn.on('open', () => {
+        this.registerPeer(conn.peer, conn, null)
+        conn.on('data', (data) => this.events.onMessage(data))
+        conn.on('close', () => {
+          this.peers.delete(conn.peer)
+          this.events.onPeerDisconnected(conn.peer)
+        })
+        if (this.role === 'broadcaster' && this.localStream) {
+          this.callPeer(conn.peer)
+        }
       })
-      if (this.role === 'broadcaster' && this.localStream) {
-        this.callPeer(conn.peer)
-      }
     })
   }
 
