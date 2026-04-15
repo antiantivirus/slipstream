@@ -49,22 +49,6 @@
         opacity: 0.4;
         cursor: not-allowed;
       }
-
-      .listener-setup {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-      }
-      input {
-        background: #111;
-        border: 1px solid #333;
-        color: #e0e0e0;
-        border-radius: 4px;
-        padding: 0.4rem 0.6rem;
-        font-size: 0.85rem;
-        font-family: monospace;
-      }
     </style>
   </head>
   <body>
@@ -73,31 +57,19 @@
     <div class="grid">
       <div class="card">
         <h2>Broadcaster</h2>
-        <slipstream-broadcaster></slipstream-broadcaster>
+        <slipstream-broadcaster
+          channel-id="eb0d511c-042d-47ef-a6b2-6dc7f3ce6490"
+        ></slipstream-broadcaster>
       </div>
 
       <div class="card">
         <h2>Listener</h2>
-        <div class="listener-setup">
-          <input
-            id="broadcaster-id-input"
-            type="text"
-            placeholder="Paste broadcaster peer ID..."
-          />
-          <button id="set-id-btn">Set ID &amp; Connect</button>
-        </div>
-        <slipstream-listener id="listener"></slipstream-listener>
+        <slipstream-listener
+          channel-id="eb0d511c-042d-47ef-a6b2-6dc7f3ce6490"
+        ></slipstream-listener>
       </div>
     </div>
 
     <script type="module" src="/src/index.ts"></script>
-    <script type="module">
-      document.getElementById("set-id-btn").addEventListener("click", () => {
-        const input = document.getElementById("broadcaster-id-input");
-        const listener = document.getElementById("listener");
-        listener.setAttribute("broadcaster-id", input.value.trim());
-        listener.shadowRoot?.querySelector("button")?.click();
-      });
-    </script>
   </body>
 </html>

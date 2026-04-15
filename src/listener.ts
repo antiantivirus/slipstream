@@ -2,43 +2,27 @@ import { LitElement, html, css } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { RadioMesh } from './mesh.js'
 
+type ListenerState = 'connecting' | 'offline' | 'live' | 'failed'
+
 @customElement('slipstream-listener')
 export class SlipstreamListener extends LitElement {
   static styles = css`
-    :host {
-      display: block;
-      font-family: inherit;
-    }
-
-    .panel {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .status {
-      font-size: 0.85rem;
-    }
-
-    audio {
-      width: 100%;
-    }
+    :host { display: block; }
+    .panel { display: flex; flex-direction: column; gap: 0.5rem; }
   `
 
-  /** The broadcaster's peer ID (room ID) to connect to */
-  @property({ type: String, attribute: 'broadcaster-id' }) broadcasterId = ''
+  @property({ type: String, attribute: 'channel-id' }) channelId = ''
 
-  @state() private connected = false
-  @state() private status = 'idle'
-  @state() private hasStream = false
+  @state() private state: ListenerState = 'connecting'
+  @state() private playing = false
+  @state() private nowPlaying = ''
 
   private mesh: RadioMesh | null = null
-  private audioRef: HTMLAudioElement | null = null
+  private audioEl: HTMLAudioElement | null = null
 
   connectedCallback(): void {
     super.connectedCallback()
-    this.audioRef = document.createElement('audio')
-    this.audioRef.autoplay = true
+    this.audioEl = document.createElement('audio')
   }
 
   disconnectedCallback(): void {
@@ -47,59 +31,66 @@ export class SlipstreamListener extends LitElement {
     this.mesh = null
   }
 
-  private async handleConnect(): Promise<void> {
-    if (this.connected) {
-      this.mesh?.destroy()
-      this.mesh = null
-      this.connected = false
-      this.hasStream = false
-      this.status = 'idle'
-      return
+  updated(changed: Map<string, unknown>): void {
+    if (changed.has('channelId') && this.channelId && !this.mesh) {
+      this.connect()
     }
+  }
 
-    const target = this.broadcasterId.trim()
-    if (!target) {
-      this.status = 'error: no broadcaster-id set'
-      return
-    }
-
-    this.status = 'connecting...'
+  private connect(): void {
+    this.state = 'connecting'
     this.mesh = new RadioMesh('listener', {
       onReady: () => {
-        this.mesh!.connectToPeer(target)
+        this.mesh!.connectToPeer(this.channelId)
       },
       onPeerConnected: () => {
-        this.connected = true
-        this.status = 'connected — waiting for stream...'
+        this.state = 'offline'
       },
       onPeerDisconnected: () => {
-        this.connected = false
-        this.hasStream = false
-        this.status = 'disconnected'
+        this.playing = false
+        this.state = 'offline'
       },
       onStream: (stream) => {
-        if (this.audioRef) {
-          this.audioRef.srcObject = stream
-        }
-        this.hasStream = true
-        this.status = 'receiving stream'
+        if (this.audioEl) this.audioEl.srcObject = stream
+        this.state = 'live'
       },
-      onError: (err) => {
-        this.status = `error: ${err.message}`
+      onMessage: (data) => {
+        if (data && typeof data === 'object' && (data as Record<string, unknown>).type === 'nowPlaying') {
+          this.nowPlaying = String((data as Record<string, unknown>).text ?? '')
+        }
+      },
+      onError: () => {
+        this.state = 'failed'
       },
     })
   }
 
+  private handlePlay(): void {
+    this.audioEl?.play()
+    this.playing = true
+  }
+
+  private handleStop(): void {
+    this.audioEl?.pause()
+    this.playing = false
+  }
+
   render() {
+    if (this.state === 'failed') {
+      return html`<div class="panel"><p>Failed to connect</p></div>`
+    }
+
+    const isLive = this.state === 'live'
+
     return html`
       <div class="panel">
-        <button @click=${this.handleConnect}>
-          ${this.connected ? 'Disconnect' : 'Connect'}
+        <p>${isLive ? `Live: ${this.nowPlaying || '…'}` : 'Offline'}</p>
+        <button
+          @click=${this.playing ? this.handleStop : this.handlePlay}
+          ?disabled=${!isLive}
+        >
+          ${this.playing ? 'Stop' : 'Play'}
         </button>
-        <span class="status">Status: ${this.status}</span>
-        ${this.hasStream && this.audioRef
-        ? html`<audio .srcObject=${this.audioRef.srcObject} autoplay controls></audio>`
-        : ''}
       </div>
     `
   }

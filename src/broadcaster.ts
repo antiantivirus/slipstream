@@ -23,7 +23,7 @@ export class SlipstreamBroadcaster extends LitElement {
     }
   `
 
-  @property({ type: String, attribute: 'room-id' }) roomId = ''
+  @property({ type: String, attribute: 'channel-id' }) channelId = ''
 
   @state() private peerId: string | null = null
   @state() private broadcasting = false
@@ -33,6 +33,7 @@ export class SlipstreamBroadcaster extends LitElement {
   @state() private selectedDeviceId = ''
   @state() private level = 0
   @state() private gain = 1
+  @state() private liveNow = ''
 
   private mesh: RadioMesh | null = null
   private audioContext: AudioContext | null = null
@@ -66,11 +67,23 @@ export class SlipstreamBroadcaster extends LitElement {
     this.status = 'connecting...'
     this.mesh = new RadioMesh('broadcaster', {
       onReady: (id) => { this.peerId = id; this.status = 'ready' },
-      onPeerConnected: (id) => { this.peers = [...this.peers, id] },
+      onPeerConnected: (id) => {
+        this.peers = [...this.peers, id]
+        // Send current live now text to the newly joined listener
+        if (this.liveNow) this.mesh?.sendToAll({ type: 'nowPlaying', text: this.liveNow })
+      },
       onPeerDisconnected: (id) => { this.peers = this.peers.filter((p) => p !== id) },
       onStream: () => { },
+      onMessage: () => { },
       onError: (err) => { this.status = `error: ${err.message}` },
-    }, this.roomId || undefined)
+    }, this.channelId || undefined)
+  }
+
+  private handleLiveNowSubmit(e: SubmitEvent): void {
+    e.preventDefault()
+    const input = (e.target as HTMLFormElement).elements.namedItem('liveNow') as HTMLInputElement
+    this.liveNow = input.value
+    this.mesh?.sendToAll({ type: 'nowPlaying', text: this.liveNow })
   }
 
   private stopAudio(): void {
@@ -186,8 +199,16 @@ export class SlipstreamBroadcaster extends LitElement {
           ${this.broadcasting ? 'Stop Broadcasting' : 'Start Broadcasting'}
         </button>
 
+        <form @submit=${this.handleLiveNowSubmit}>
+          <label>
+            Live now
+            <input name="liveNow" type="text" placeholder="What's on air..." .value=${this.liveNow} />
+          </label>
+          <button type="submit">Update</button>
+        </form>
+
         <p>Status: ${this.status}</p>
-        ${this.peerId ? html`<p>Room ID: ${this.peerId}</p>` : ''}
+        ${this.peerId ? html`<p>Channel ID: ${this.peerId}</p>` : ''}
 
         <p>Listeners (${this.peers.length})</p>
         ${this.peers.length

@@ -6,6 +6,7 @@ export interface MeshEvents {
   onPeerConnected: (peerId: string) => void
   onPeerDisconnected: (peerId: string) => void
   onStream: (stream: MediaStream) => void
+  onMessage: (data: unknown) => void
   onError: (err: Error) => void
   onReady: (peerId: string) => void
 }
@@ -15,10 +16,6 @@ interface PeerState {
   media: MediaConnection | null
 }
 
-/**
- * Simple mesh network — all peers connect to each other directly.
- * The broadcaster streams audio to every connected listener.
- */
 export class RadioMesh {
   private peer: Peer
   private peers = new Map<string, PeerState>()
@@ -55,6 +52,7 @@ export class RadioMesh {
     // Incoming data connection
     this.peer.on('connection', (conn) => {
       this.registerPeer(conn.peer, conn, null)
+      conn.on('data', (data) => this.events.onMessage(data))
       conn.on('close', () => {
         this.peers.delete(conn.peer)
         this.events.onPeerDisconnected(conn.peer)
@@ -73,7 +71,6 @@ export class RadioMesh {
     return [...this.peers.keys()]
   }
 
-  /** Broadcaster: stream to all connected peers using a pre-processed MediaStream */
   startBroadcast(stream: MediaStream): void {
     this.localStream = stream
     for (const id of this.peers.keys()) {
@@ -81,7 +78,12 @@ export class RadioMesh {
     }
   }
 
-  /** Listener: connect to a broadcaster (or any peer) by their peer ID */
+  sendToAll(data: unknown): void {
+    for (const { data: conn } of this.peers.values()) {
+      conn?.send(data)
+    }
+  }
+
   connectToPeer(remotePeerId: string): void {
     if (this.peers.has(remotePeerId)) return
 
@@ -89,12 +91,12 @@ export class RadioMesh {
 
     conn.on('open', () => {
       this.registerPeer(remotePeerId, conn, null)
-
-      // If broadcaster, immediately call this new peer with the stream
       if (this.role === 'broadcaster' && this.localStream) {
         this.callPeer(remotePeerId)
       }
     })
+
+    conn.on('data', (data) => this.events.onMessage(data))
 
     conn.on('close', () => {
       this.peers.delete(remotePeerId)
