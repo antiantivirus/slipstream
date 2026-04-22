@@ -8,14 +8,13 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'slipstream',
-      formats: ['es', 'umd'],
-      fileName: (format) => `slipstream.${format}.js`,
-    },
-    rollupOptions: {
-      // Lit is small enough to bundle in — no need to mark as external
-      // for a drop-in script tag library
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        broadcaster: resolve(__dirname, 'src/broadcaster.ts'),
+        listener: resolve(__dirname, 'src/listener.ts'),
+      },
+      formats: ['es'],
+      fileName: (_, entryName) => `${entryName}.js`,
     },
   },
 })

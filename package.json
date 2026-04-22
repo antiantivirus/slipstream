@@ -3,14 +3,12 @@
   "version": "0.1.0",
   "description": "",
   "type": "module",
-  "main": "./dist/slipstream.umd.js",
-  "module": "./dist/slipstream.es.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "import": "./dist/slipstream.es.js",
-      "require": "./dist/slipstream.umd.js"
-    }
+    ".": { "import": "./dist/index.js" },
+    "./broadcaster": { "import": "./dist/broadcaster.js" },
+    "./listener": { "import": "./dist/listener.js" }
   },
   "files": [
     "dist"
